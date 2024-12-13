@@ -1,0 +1,8 @@
+[build]
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/slack/actions"
+  to = "/.netlify/functions/slack-actions"
+  status = 200
+  force = true 
