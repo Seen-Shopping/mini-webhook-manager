@@ -82,8 +82,8 @@ export const handler: Handler = async (event) => {
           const feedbackType = metadata as FeedbackType;
           const feedbackEmoji = FEEDBACK_EMOJIS[feedbackType];
 
-          await processFeedbackAction(feedbackType, actions[0].value);
-          await manageReactions(channel.id, message.ts, {
+          processFeedbackAction(feedbackType, actions[0].value);
+          manageReactions(channel.id, message.ts, {
             add: feedbackEmoji,
             remove: Object.values(FEEDBACK_EMOJIS).filter(
               (emoji) => emoji !== feedbackEmoji
@@ -92,8 +92,8 @@ export const handler: Handler = async (event) => {
           break;
         }
         case "purchase": {
-          await processPurchaseAction(actions[0].value);
-          await manageReactions(channel.id, message.ts, {
+          processPurchaseAction(actions[0].value);
+          manageReactions(channel.id, message.ts, {
             add: PURCHASE_EMOJI,
           });
           break;
