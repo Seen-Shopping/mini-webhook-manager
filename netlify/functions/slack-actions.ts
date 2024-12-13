@@ -59,7 +59,6 @@ export const handler: Handler = async (event) => {
       throw new Error("Missing payload in the request body.");
     }
     const payload = JSON.parse(payloadString);
-    console.log(payload, payload.type);
     // Handle button clicks
     if (payload.type === "block_actions") {
       const [actionId, metadata] = payload.actions[0].action_id.split(":");
