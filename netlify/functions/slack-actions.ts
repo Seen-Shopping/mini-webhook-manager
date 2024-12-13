@@ -1,25 +1,36 @@
 import { Handler } from "@netlify/functions";
-import { updateAirtableRecord } from "./utils/airtable";
 
-const feedbackOptionValues = {
+import { updateAirtableRecord } from "./utils/airtable";
+import { manageReactions } from "./utils/slack";
+
+const FEEDBACK_OPTIONS = {
   love: "Love",
   like: "Like",
   hate: "Hate",
-};
+} as const;
+
+export const FEEDBACK_EMOJIS = {
+  love: "heart",
+  like: "thumbsup",
+  hate: "x",
+} as const;
+
+export const PURCHASE_EMOJI = "shopping_bags";
+
+type FeedbackType = keyof typeof FEEDBACK_OPTIONS;
+type ActionType = "feedback" | "purchase";
 
 const processFeedbackAction = async (
-  actionId: keyof typeof feedbackOptionValues,
+  feedbackType: FeedbackType,
   recordId: string
 ) => {
-  const updatedRecord = await updateAirtableRecord(
+  return await updateAirtableRecord(
     recordId,
     {
-      Feedback: feedbackOptionValues[actionId],
+      Feedback: FEEDBACK_OPTIONS[feedbackType],
     },
     process.env.AIRTABLE_LOOKBOOK_ITEMS_TABLE_NAME || ""
   );
-  console.log(updatedRecord);
-  return updatedRecord;
 };
 
 const processPurchaseAction = async (recordId: string) => {
@@ -61,27 +72,43 @@ export const handler: Handler = async (event) => {
     const payload = JSON.parse(payloadString);
     // Handle button clicks
     if (payload.type === "block_actions") {
-      const [actionId, metadata] = payload.actions[0].action_id.split(":");
-      console.log(actionId, metadata);
-      switch (actionId) {
-        case "feedback":
-          await processFeedbackAction(metadata, payload.actions[0].value);
-          return {
-            statusCode: 200,
-            body: "",
-          };
-        case "purchase":
-          await processPurchaseAction(payload.actions[0].value);
-          return {
-            statusCode: 200,
-            body: "",
-          };
+      const [actionType, metadata] = payload.actions[0].action_id.split(
+        ":"
+      ) as [ActionType, string];
+      const { channel, message, actions } = payload;
+
+      switch (actionType) {
+        case "feedback": {
+          const feedbackType = metadata as FeedbackType;
+          const feedbackEmoji = FEEDBACK_EMOJIS[feedbackType];
+
+          await processFeedbackAction(feedbackType, actions[0].value);
+          await manageReactions(channel.id, message.ts, {
+            add: feedbackEmoji,
+            remove: Object.values(FEEDBACK_EMOJIS).filter(
+              (emoji) => emoji !== feedbackEmoji
+            ),
+          });
+          break;
+        }
+        case "purchase": {
+          await processPurchaseAction(actions[0].value);
+          await manageReactions(channel.id, message.ts, {
+            add: PURCHASE_EMOJI,
+          });
+          break;
+        }
         default:
           return {
             statusCode: 400,
             body: "Unsupported action type",
           };
       }
+
+      return {
+        statusCode: 200,
+        body: "",
+      };
     } else {
       return {
         statusCode: 400,
