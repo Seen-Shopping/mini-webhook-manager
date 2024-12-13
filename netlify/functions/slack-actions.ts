@@ -7,15 +7,12 @@ const feedbackOptionValues = {
   hate: "Hate",
 };
 
-type ItemActionValue = {
-  lookBookItemId: string;
-};
-
-const processItemActions = async (
+const processFeedbackAction = async (
   actionId: keyof typeof feedbackOptionValues,
-  value: string
+  recordId: string
 ) => {
   const updatedRecord = await updateAirtableRecord(
+    recordId,
     {
       Feedback: feedbackOptionValues[actionId],
     },
@@ -34,13 +31,6 @@ const processPurchaseAction = async (recordId: string) => {
     process.env.AIRTABLE_LOOKBOOK_ITEMS_TABLE_NAME || ""
   );
   return updatedRecord;
-};
-
-const processFeedbackAction = async (
-  feedbackOption: keyof typeof feedbackOptionValues,
-  recordId: string
-) => {
-  return await processItemActions(feedbackOption, recordId);
 };
 
 export const handler: Handler = async (event) => {
@@ -72,16 +62,6 @@ export const handler: Handler = async (event) => {
     console.log(payload, payload.type);
     // Handle button clicks
     if (payload.type === "block_actions") {
-      /* 
-					"action_id": "feedback:love",
-					"value": "RECORD_ID"
-
-          AND 
-
-          "action_id": "purchase",
-					"value": "RECORD_ID"
-      */
-
       const [actionId, metadata] = payload.actions[0].action_id.split(":");
       console.log(actionId, metadata);
       switch (actionId) {
