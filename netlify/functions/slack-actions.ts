@@ -11,29 +11,33 @@ type ItemActionValue = {
   lookBookItemId: string;
 };
 
-const processItemActions = (
+const processItemActions = async (
   actionId: keyof typeof feedbackOptionValues,
   value: string
 ) => {
   const itemActionValue = JSON.parse(value) as ItemActionValue;
-  updateAirtableRecord(
+  const updatedRecord = await updateAirtableRecord(
     itemActionValue.lookBookItemId,
     {
       Feedback: feedbackOptionValues[actionId],
     },
     process.env.AIRTABLE_LOOKBOOK_ITEMS_TABLE_NAME || ""
   );
+  console.log(updatedRecord);
+  return updatedRecord;
 };
 
-const processPurchaseAction = (value: string) => {
+const processPurchaseAction = async (value: string) => {
   const itemActionValue = JSON.parse(value) as ItemActionValue;
-  updateAirtableRecord(
+  const updatedRecord = await updateAirtableRecord(
     itemActionValue.lookBookItemId,
     {
       Purchased: true,
     },
     process.env.AIRTABLE_LOOKBOOK_ITEMS_TABLE_NAME || ""
   );
+  console.log(updatedRecord);
+  return updatedRecord;
 };
 
 export const handler: Handler = async (event) => {
