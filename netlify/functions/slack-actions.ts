@@ -2,9 +2,9 @@ import { Handler } from "@netlify/functions";
 import { updateAirtableRecord } from "./utils/airtable";
 
 const feedbackOptionValues = {
-  love_action: "Love",
-  like_action: "Like",
-  hate_action: "Hate",
+  love: "Love",
+  like: "Like",
+  hate: "Hate",
 };
 
 type ItemActionValue = {
@@ -15,9 +15,7 @@ const processItemActions = async (
   actionId: keyof typeof feedbackOptionValues,
   value: string
 ) => {
-  const itemActionValue = JSON.parse(value) as ItemActionValue;
   const updatedRecord = await updateAirtableRecord(
-    itemActionValue.lookBookItemId,
     {
       Feedback: feedbackOptionValues[actionId],
     },
@@ -27,17 +25,22 @@ const processItemActions = async (
   return updatedRecord;
 };
 
-const processPurchaseAction = async (value: string) => {
-  const itemActionValue = JSON.parse(value) as ItemActionValue;
+const processPurchaseAction = async (recordId: string) => {
   const updatedRecord = await updateAirtableRecord(
-    itemActionValue.lookBookItemId,
+    recordId,
     {
       Purchased: true,
     },
     process.env.AIRTABLE_LOOKBOOK_ITEMS_TABLE_NAME || ""
   );
-  console.log(updatedRecord);
   return updatedRecord;
+};
+
+const processFeedbackAction = async (
+  feedbackOption: keyof typeof feedbackOptionValues,
+  recordId: string
+) => {
+  return await processItemActions(feedbackOption, recordId);
 };
 
 export const handler: Handler = async (event) => {
@@ -49,34 +52,56 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  try {
-    const body = JSON.parse(event.body ? event.body : "");
+  if (!event.body) {
+    return {
+      statusCode: 400,
+      body: "Missing body in the request",
+    };
+  }
 
-    // Slack stringified payload needs to be parsed
-    const payload = JSON.parse(body.payload);
+  try {
+    // Parse the URL-encoded body using URLSearchParams
+    const params = new URLSearchParams(event.body || "");
+
+    // Get the `payload` parameter and parse it as JSON
+    const payloadString = params.get("payload");
+    if (!payloadString) {
+      throw new Error("Missing payload in the request body.");
+    }
+    const payload = JSON.parse(payloadString);
+    console.log(payload, payload.type);
     // Handle button clicks
     if (payload.type === "block_actions") {
-      const action = payload.actions[0];
-      const actionId = action.action_id;
-      const value = action.value;
-      console.log(actionId);
-      if (Object.keys(feedbackOptionValues).includes(actionId)) {
-        await processItemActions(actionId, value);
-        return {
-          statusCode: 200,
-          body: "",
-        };
-      } else if (actionId === "purchase_action") {
-        await processPurchaseAction(value);
-        return {
-          statusCode: 200,
-          body: "",
-        };
-      } else {
-        return {
-          statusCode: 400,
-          body: "Unsupported action type",
-        };
+      /* 
+					"action_id": "feedback:love",
+					"value": "RECORD_ID"
+
+          AND 
+
+          "action_id": "purchase",
+					"value": "RECORD_ID"
+      */
+
+      const [actionId, metadata] = payload.actions[0].action_id.split(":");
+      console.log(actionId, metadata);
+      switch (actionId) {
+        case "feedback":
+          await processFeedbackAction(metadata, payload.actions[0].value);
+          return {
+            statusCode: 200,
+            body: "",
+          };
+        case "purchase":
+          await processPurchaseAction(payload.actions[0].value);
+          return {
+            statusCode: 200,
+            body: "",
+          };
+        default:
+          return {
+            statusCode: 400,
+            body: "Unsupported action type",
+          };
       }
     } else {
       return {
