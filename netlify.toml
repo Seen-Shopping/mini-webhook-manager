@@ -6,3 +6,9 @@
   to = "/.netlify/functions/slack-actions"
   status = 200
   force = true 
+
+[[redirects]]
+  from = "/process-html"
+  to = "/.netlify/functions/process-html"
+  status = 200
+  force = true 
