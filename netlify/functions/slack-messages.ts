@@ -20,6 +20,7 @@ export const handler: Handler = async (event) => {
     // Parse the incoming JSON body directly
     const body = JSON.parse(event.body);
 
+    console.log(body);
     // Handle Slack's URL verification challenge
     if (body.challenge) {
       return {
