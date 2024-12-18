@@ -6,3 +6,9 @@
   to = "/.netlify/functions/slack-actions"
   status = 200
   force = true 
+
+[[redirects]]
+  from = "/slack/messages"
+  to = "/.netlify/functions/slack-messages"
+  status = 200
+  force = true 
