@@ -1,10 +1,7 @@
 import { Handler } from "@netlify/functions";
 
-import { updateAirtableRecord } from "./utils/airtable";
-import { manageReactions } from "./utils/slack";
-
 export const handler: Handler = async (event) => {
-  // Only allow POST requests
+  // Allow only POST requests
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -20,25 +17,28 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    // Parse the URL-encoded body using URLSearchParams
-    const params = new URLSearchParams(event.body || "");
+    // Parse the incoming JSON body directly
+    const body = JSON.parse(event.body);
 
-    console.log(params);
-
-    if (params.get("challenge")) {
+    // Handle Slack's URL verification challenge
+    if (body.challenge) {
       return {
         statusCode: 200,
-        body: params.get("challenge"),
+        body: body.challenge,
       };
     }
 
-    // Get the `payload` parameter and parse it as JSON
-    const payloadString = params.get("payload");
-    if (!payloadString) {
-      throw new Error("Missing payload in the request body.");
-    }
-    const payload = JSON.parse(payloadString);
+    // Handle actual events here
+    // For example, if a message event:
+    // if (body.event && body.event.type === "message") {
+    //   console.log("New message event:", body.event);
+    //   // do something with the message
+    // }
 
+    return {
+      statusCode: 200,
+      body: "OK",
+    };
   } catch (error) {
     console.error("Error processing request:", error);
     return {
